@@ -2334,6 +2334,7 @@ version = "1.0.0"
 dependencies = [
  "dotenv",
  "futures",
+ "lazy_static",
  "mongodb",
  "nanoid",
  "rocket",
