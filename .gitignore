@@ -2,3 +2,4 @@ target/
 .env
 conf.toml
 build.sh
+.vscode/
