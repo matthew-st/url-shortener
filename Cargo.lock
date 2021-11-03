@@ -2330,8 +2330,9 @@ dependencies = [
 
 [[package]]
 name = "url-shortener"
-version = "1.0.0"
+version = "1.1.0"
 dependencies = [
+ "async-std",
  "dotenv",
  "futures",
  "lazy_static",

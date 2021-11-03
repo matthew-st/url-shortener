@@ -99,11 +99,3 @@ pub fn check_env() -> bool {
     };
     boolean
 }
-
-pub async fn save_clicks() {
-    let clicks = CACHE.lock().unwrap();
-            for url in clicks.iter() {
-                collection_2.update_one(doc!{"id": url.0}, doc!{"$inc": {"cl": url.1}}, None).await.unwrap();
-            }
-    thread::sleep(Duration::from_secs(env::var("save_after").unwrap().parse::<u64>().unwrap()));
-}

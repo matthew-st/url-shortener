@@ -1,15 +1,15 @@
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate lazy_static;
 pub mod utils;
-use rocket::{State, serde::json::{Json, Value, json}, http::{Status, ContentType}, response::{Redirect}, uri};
+use rocket::{State, serde::json::{Json, Value, json}, http::{Status, ContentType}, response::{Redirect}, uri, tokio::sync::Mutex};
 use utils::{NewShort, Url, Key, check_env};
 use futures::stream::{TryStreamExt};
-use std::{collections::{HashMap}, thread, time::{Duration}, env, sync::{Mutex}};
+use std::{collections::{HashMap}, thread, time::{Duration}, env, sync::{Arc}};
 use mongodb::{Client, Collection, bson::doc};
 use dotenv;
 
 lazy_static! {
-    static ref CACHE: Mutex<HashMap<String, i64>> = Mutex::new(HashMap::new());
+    static ref CACHE: Arc<Mutex<HashMap<String, i64>>> = Arc::new(Mutex::new(HashMap::new()));
 }
 
 // Main function
@@ -28,10 +28,12 @@ async fn launch() -> _ {
     let collection_2 = collection.clone();
     rocket::tokio::spawn(async move {
         loop {
-            let clicks = CACHE.lock().unwrap();
+            let mut clicks = CACHE.lock().await;
             for url in clicks.iter() {
                 collection_2.update_one(doc!{"id": url.0}, doc!{"$inc": {"cl": url.1}}, None).await.unwrap();
             }
+            clicks.clear();
+            drop(clicks);
             thread::sleep(Duration::from_secs(env::var("save_after").unwrap().parse::<u64>().unwrap()));
         }
     });
@@ -99,9 +101,13 @@ async fn redirect(collection: &State<Collection<Url>>, id: String) -> Redirect {
     } else {
         let unwrapped = doc.unwrap();
         if env::var("track_clicks").unwrap().contains("1") {
-            let cache = CACHE.lock().unwrap();
-            let choice = cache.get(&id.clone()).unwrap_or(&0);
-            CACHE.lock().unwrap().insert(id, choice + &1);
+            println!("beginning if block");
+            let mut cache = CACHE.lock().await;
+            println!("cache ready");
+            let choice = *cache.get(&id.clone()).unwrap_or(&0);
+            println!("made choice {}", choice);
+            cache.insert(id, choice + &1);
+            println!("Inserted to cache")
         }
         return Redirect::to(format!("//{}", unwrapped.to));
     }
@@ -112,11 +118,12 @@ async fn data(collection: &State<Collection<Url>>, id: String, key: Key) -> (Sta
     if key != Key::from_string(env::var("key").unwrap()) || key.as_string().len() <= 0 {
         return (Status::Forbidden, (ContentType::JSON, Some(json!({"error": true, "reason": "incorrect key"}))))
     }
-    let doc = collection.inner().clone().find_one(doc! {"id": id}, None).await.unwrap();
+    let doc = collection.inner().clone().find_one(doc! {"id": id}, None).await.unwrap().unwrap();
+    let send = doc! {"id": doc.id.clone(), "to": doc.to, "cl": doc.cl + CACHE.lock().await.get(&doc.id).unwrap_or(&0)};
     (Status::Ok, 
         (
             ContentType::JSON,
-            Some(json!(doc))
+            Some(json!(send))
         )
     )
 }
