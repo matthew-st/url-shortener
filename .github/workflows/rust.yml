@@ -21,14 +21,14 @@ jobs:
           override: true
 
       - name: Build
-        run: cargo build --all --release && strip target/release/url-shortener && mv target/release/url-shortener target/release/url-shortener_linux-amd64
+        run: cargo build --all --release && strip target/release/url-shortener && mv target/release/url-shortener target/release/url-shortener_linux_amd64
 
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            target/release/url-shortener_linux-amd64
+            target/release/url-shortener_linux_amd64
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
