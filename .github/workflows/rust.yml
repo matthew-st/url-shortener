@@ -21,7 +21,7 @@ jobs:
           override: true
 
       - name: Build
-        run: cargo build --all --release && strip target/release/url-shortener && mv target/release/url-shortener target/release/url-shortener_amd64
+        run: cargo build --all --release && strip target/release/url-shortener && mv target/release/url-shortener target/release/url-shortener_linux-amd64
 
       - name: Release
         uses: softprops/action-gh-release@v1
