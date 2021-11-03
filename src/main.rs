@@ -1,7 +1,7 @@
 #[macro_use] extern crate rocket;
 #[macro_use] extern crate lazy_static;
 pub mod utils;
-use rocket::{State, serde::json::{Json, Value, json}, http::{Status, ContentType}, response::{Redirect}, uri, tokio::sync::Mutex};
+use rocket::{State, serde::json::{Json, Value, json}, http::{Status, ContentType}, tokio::sync::Mutex};
 use utils::{NewShort, Url, Key, check_env};
 use futures::stream::{TryStreamExt};
 use std::{collections::{HashMap}, thread, time::{Duration}, env, sync::{Arc}};
@@ -10,6 +10,7 @@ use dotenv;
 
 lazy_static! {
     static ref CACHE: Arc<Mutex<HashMap<String, i64>>> = Arc::new(Mutex::new(HashMap::new()));
+    static ref NOTFOUND_PAGE: String = "<head><title>404 Not Found</title></head><html><body style=\"text-align:center;width:100%;\"><h2>Nothing to see here!</h2><hr/><a href=\"https://github.com/matthewthechickenman/url-shortener\"><h4>url-shortener/1.1.1</h4></a></body></html>".to_string();
 }
 
 // Main function
@@ -49,17 +50,8 @@ async fn launch() -> _ {
 
 // Catchers
 #[catch(404)]
-fn not_found() -> (Status, (ContentType, &'static str)) {
-    (Status::NotFound, (ContentType::HTML, "<head>
-    <title>404 Not Found</title>
-    </head>
-    <html>
-    <body style=\"text-align:center;width:100%;\">
-    <h2>Nothing to see here!</h2>
-    <hr/>
-    <a href=\"https://github.com/matthewthechickenman/url-shortener\"><h4>url-shortener/1.1.0</h4></a>
-    </body>
-    </html>"))
+fn not_found() -> (Status, (ContentType, String)) {
+    (Status::NotFound, (ContentType::HTML, NOTFOUND_PAGE.to_string()))
 }
 
 // Routes
@@ -94,22 +86,18 @@ async fn new(collection: &State<Collection<Url>>, data: Json<NewShort>, key: Key
         }
         
 #[get("/<id>")]
-async fn redirect(collection: &State<Collection<Url>>, id: String) -> Redirect {
+async fn redirect(collection: &State<Collection<Url>>, id: String) -> (Status, (ContentType, String)) {
     let doc = collection.inner().clone().find_one(doc! {"id": id.clone()}, None).await.unwrap();
     if doc.is_none() {
-        return Redirect::to(uri!("/"));
+        return (Status::NotFound, (ContentType::HTML, NOTFOUND_PAGE.to_string()));
     } else {
         let unwrapped = doc.unwrap();
         if env::var("track_clicks").unwrap().contains("1") {
-            println!("beginning if block");
             let mut cache = CACHE.lock().await;
-            println!("cache ready");
             let choice = *cache.get(&id.clone()).unwrap_or(&0);
-            println!("made choice {}", choice);
             cache.insert(id, choice + &1);
-            println!("Inserted to cache")
         }
-        return Redirect::to(format!("//{}", unwrapped.to));
+        return (Status::Ok, (ContentType::HTML, format!("<meta http-equiv=\"refresh\" content=\"0;url={}\"/>", unwrapped.to)));
     }
 }
         
