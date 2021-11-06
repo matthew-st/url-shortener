@@ -2,11 +2,6 @@
 
 A URL shortener written in Rust.
 
-### Extra notes
-ROCKET_PORT in the .env can be used to set the server's port
-ROCKET_ADDRESS in the .env can be used to set the server's address.
-See more [here](https://docs.rs/rocket/0.4.10/rocket/config/)
-
 ## Setup on Linux:
 ```
 # Fill in your .env.example
@@ -33,3 +28,8 @@ I have no idea, feel free to add one with a pull request
 
 ## Notes
 > You can also run this on docker using the provided Dockerfile.
+
+
+> ROCKET_PORT in the .env can be used to set the server's port
+> ROCKET_ADDRESS in the .env can be used to set the server's address.
+> See more [here](https://docs.rs/rocket/0.4.10/rocket/config/)
