@@ -10,6 +10,7 @@ use dotenv;
 
 lazy_static! {
     static ref CACHE: Arc<Mutex<HashMap<String, i64>>> = Arc::new(Mutex::new(HashMap::new()));
+    static ref LINKS: Arc<Mutex<HashMap<String, Option<Url>>>> = Arc::new(Mutex::new(HashMap::new()));
     static ref NOTFOUND_PAGE: String = "<head><title>404 Not Found</title></head><html><body style=\"text-align:center;width:100%;\"><h2>Nothing to see here!</h2><hr/><a href=\"https://github.com/matthewthechickenman/url-shortener\"><h4>url-shortener/1.1.1</h4></a></body></html>".to_string();
 }
 
@@ -39,7 +40,7 @@ async fn launch() -> _ {
         }
     });
     rocket::build()
-    .mount("/l/", routes![redirect])
+    .mount("/", routes![redirect])
     .mount("/api", routes![new])
     .mount("/api", routes![data])
     .mount("/api", routes![all])
@@ -75,6 +76,7 @@ async fn new(collection: &State<Collection<Url>>, data: Json<NewShort>, key: Key
                 ));
             } else {
                 coll.insert_one(res.clone(), None).await.unwrap();
+                LINKS.lock().await.insert(res.clone().id, Some(res.clone()));
                 return (
                     Status::Ok, 
                     (
@@ -87,8 +89,14 @@ async fn new(collection: &State<Collection<Url>>, data: Json<NewShort>, key: Key
         
 #[get("/<id>")]
 async fn redirect(collection: &State<Collection<Url>>, id: String) -> (Status, (ContentType, String)) {
+    let mut cached = LINKS.lock().await;
+    if cached.get(&id).is_some() {
+        let unwrapped = cached.get(&id).unwrap().as_ref().unwrap();
+        return (Status::Ok, (ContentType::HTML, format!("<meta http-equiv=\"refresh\" content=\"0;url=https://{}\"/>", unwrapped.to)));
+    }
     let doc = collection.inner().clone().find_one(doc! {"id": id.clone()}, None).await.unwrap();
     if doc.is_none() {
+        cached.insert(id, None);
         return (Status::NotFound, (ContentType::HTML, NOTFOUND_PAGE.to_string()));
     } else {
         let unwrapped = doc.unwrap();
@@ -97,7 +105,7 @@ async fn redirect(collection: &State<Collection<Url>>, id: String) -> (Status, (
             let choice = *cache.get(&id.clone()).unwrap_or(&0);
             cache.insert(id, choice + &1);
         }
-        return (Status::Ok, (ContentType::HTML, format!("<meta http-equiv=\"refresh\" content=\"0;url={}\"/>", unwrapped.to)));
+        return (Status::Ok, (ContentType::HTML, format!("<meta http-equiv=\"refresh\" content=\"0;url=https://{}\"/>", unwrapped.to)));
     }
 }
         
