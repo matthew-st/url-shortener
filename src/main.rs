@@ -114,7 +114,11 @@ async fn data(collection: &State<Collection<Url>>, id: String, key: Key) -> (Sta
     if key != Key::from_string(env::var("key").unwrap()) || key.as_string().len() <= 0 {
         return (Status::Forbidden, (ContentType::JSON, Some(json!({"error": true, "reason": "incorrect key"}))))
     }
-    let doc = collection.inner().clone().find_one(doc! {"id": id}, None).await.unwrap().unwrap();
+    let document = collection.inner().clone().find_one(doc! {"id": id}, None).await.unwrap();
+    if document.is_none() {
+        return (Status::NotFound, (ContentType::JSON, Some(json!({"error": true, "reason": "not found"}))))
+    }
+    let doc = document.unwrap();
     let send = doc! {"id": doc.id.clone(), "to": doc.to, "cl": doc.cl + CACHE.lock().await.get(&doc.id).unwrap_or(&0)};
     (Status::Ok, 
         (
