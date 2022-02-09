@@ -90,9 +90,11 @@ async fn new(collection: &State<Collection<Url>>, data: Json<NewShort>, key: Key
 #[get("/<id>")]
 async fn redirect(collection: &State<Collection<Url>>, id: String) -> (Status, (ContentType, String)) {
     let mut cached = LINKS.lock().await;
-    if cached.get(&id).is_some() {
+    if cached.get(&id).is_some() && cached.get(&id).unwrap().as_ref().is_some() {
         let unwrapped = cached.get(&id).unwrap().as_ref().unwrap();
         return (Status::Ok, (ContentType::HTML, format!("<meta http-equiv=\"refresh\" content=\"0;url=https://{}\"/>", unwrapped.to)));
+    } else if cached.get(&id).unwrap().as_ref().is_none() {
+        return (Status::NotFound, (ContentType::HTML, NOTFOUND_PAGE.to_string()));
     }
     let doc = collection.inner().clone().find_one(doc! {"id": id.clone()}, None).await.unwrap();
     if doc.is_none() {
