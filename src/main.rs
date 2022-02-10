@@ -97,7 +97,7 @@ async fn redirect(collection: &State<Collection<Url>>, id: String) -> (Status, (
         } else {
             return (Status::NotFound, (ContentType::HTML, NOTFOUND_PAGE.to_string()));
         }
-    } else {
+    } else if cached.get(&id).is_none() {
         return (Status::NotFound, (ContentType::HTML, NOTFOUND_PAGE.to_string()));
     }
     let doc = collection.inner().clone().find_one(doc! {"id": id.clone()}, None).await.unwrap();
