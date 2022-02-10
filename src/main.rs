@@ -31,6 +31,9 @@ async fn launch() -> _ {
     rocket::tokio::spawn(async move {
         loop {
             let mut clicks = CACHE.lock().await;
+            let mut cache = LINKS.lock().await;
+            cache.clear();
+            drop(cache);
             for url in clicks.iter() {
                 collection_2.update_one(doc!{"id": url.0}, doc!{"$inc": {"cl": url.1}}, None).await.unwrap();
             }
