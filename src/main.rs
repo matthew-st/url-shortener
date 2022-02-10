@@ -11,7 +11,7 @@ use dotenv;
 lazy_static! {
     static ref CACHE: Arc<Mutex<HashMap<String, i64>>> = Arc::new(Mutex::new(HashMap::new()));
     static ref LINKS: Arc<Mutex<HashMap<String, Option<Url>>>> = Arc::new(Mutex::new(HashMap::new()));
-    static ref NOTFOUND_PAGE: String = "<head><title>404 Not Found</title></head><html><body style=\"text-align:center;width:100%;\"><h2>Nothing to see here!</h2><hr/><a href=\"https://github.com/matthewthechickenman/url-shortener\"><h4>url-shortener/1.1.1</h4></a></body></html>".to_string();
+    static ref NOTFOUND_PAGE: String = "<head><title>404 Not Found</title></head><html><body style=\"text-align:center;width:100%;\"><h2>Nothing to see here!</h2><hr/><a href=\"https://github.com/matthewthechickenman/url-shortener\"><h4>url-shortener/1.1.4-r6</h4></a></body></html>".to_string();
 }
 
 // Main function
